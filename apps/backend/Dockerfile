@@ -19,7 +19,9 @@ COPY --from=deps /repo/apps/backend/node_modules ./apps/backend/node_modules
 COPY . .
 RUN pnpm --filter @scrai/backend build
 # Keep only production deps for the runtime image.
-RUN pnpm --filter @scrai/backend deploy --prod /app
+# --legacy: pnpm v10 requires it (or inject-workspace-packages) for `deploy`;
+# the backend has no workspace deps to inject, so legacy behaviour is correct.
+RUN pnpm --filter @scrai/backend deploy --prod --legacy /app
 
 # ---- runtime ----
 FROM node:20-alpine AS runtime
