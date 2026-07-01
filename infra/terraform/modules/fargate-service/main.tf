@@ -111,9 +111,12 @@ resource "aws_ecs_service" "this" {
     container_port   = var.container_port
   }
 
-  # Let CI roll new task definitions without Terraform fighting the image tag.
+  # Terraform owns the task definition here (it's the only deployer), so it must
+  # update the service to each new revision — new image + env changes take effect
+  # on apply. (Previously `task_definition` was ignored, which pinned the service
+  # to revision 1 and silently dropped every later image/env change.)
   lifecycle {
-    ignore_changes = [task_definition, desired_count]
+    ignore_changes = [desired_count]
   }
 
   depends_on = [aws_lb_listener_rule.path, aws_lb_listener_rule.default]

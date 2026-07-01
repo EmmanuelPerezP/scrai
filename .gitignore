@@ -47,3 +47,6 @@ uploads/
 ScrAI Notes Management Tool.zip
 design_handoff_scrai/
 *.dc.html
+
+# generated sample audio (regenerate with scripts/generate-sample-audio.sh)
+samples/audio/
