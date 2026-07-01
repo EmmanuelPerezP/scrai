@@ -1,0 +1,120 @@
+name: Deploy to AWS
+
+# Deploys infra + images. Requires these repo secrets/vars:
+#   secrets.AWS_DEPLOY_ROLE_ARN  – IAM role ARN to assume via GitHub OIDC
+#   vars.AWS_REGION              – e.g. us-east-1 (defaults to us-east-1)
+#   vars.TF_PROJECT / TF_ENV     – name prefix (default scrai / dev)
+# Optional:
+#   secrets.OPENAI_API_KEY       – enables the OpenAI provider in prod
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'infra/**'
+      - '.github/workflows/deploy.yml'
+
+permissions:
+  id-token: write # for OIDC
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  TF_PROJECT: ${{ vars.TF_PROJECT || 'scrai' }}
+  TF_ENV: ${{ vars.TF_ENV || 'dev' }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Skip if the deploy role hasn't been configured yet.
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.AWS_REGION != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.4
+
+      - name: Terraform init
+        working-directory: infra/terraform
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=scrai/${TF_ENV}.tfstate" \
+            -backend-config="region=${AWS_REGION}"
+
+      - name: Ensure ECR repositories exist
+        working-directory: infra/terraform
+        run: |
+          terraform apply -input=false -auto-approve \
+            -var="aws_region=${AWS_REGION}" \
+            -var="project=${TF_PROJECT}" \
+            -var="environment=${TF_ENV}" \
+            -target=aws_ecr_repository.backend \
+            -target=aws_ecr_repository.frontend
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push images
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          BACKEND_REPO="${REGISTRY}/${TF_PROJECT}-${TF_ENV}-backend"
+          FRONTEND_REPO="${REGISTRY}/${TF_PROJECT}-${TF_ENV}-frontend"
+
+          docker build -f apps/backend/Dockerfile -t "${BACKEND_REPO}:${IMAGE_TAG}" -t "${BACKEND_REPO}:latest" .
+          docker push "${BACKEND_REPO}:${IMAGE_TAG}"
+          docker push "${BACKEND_REPO}:latest"
+
+          # Same-origin API in prod: build the public base empty.
+          docker build -f apps/frontend/Dockerfile \
+            --build-arg NEXT_PUBLIC_API_BASE_URL="" \
+            -t "${FRONTEND_REPO}:${IMAGE_TAG}" -t "${FRONTEND_REPO}:latest" .
+          docker push "${FRONTEND_REPO}:${IMAGE_TAG}"
+          docker push "${FRONTEND_REPO}:latest"
+
+          echo "BACKEND_IMAGE=${BACKEND_REPO}:${IMAGE_TAG}" >> "$GITHUB_ENV"
+          echo "FRONTEND_IMAGE=${FRONTEND_REPO}:${IMAGE_TAG}" >> "$GITHUB_ENV"
+
+      - name: Terraform apply (full)
+        working-directory: infra/terraform
+        env:
+          TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          terraform apply -input=false -auto-approve \
+            -var="aws_region=${AWS_REGION}" \
+            -var="project=${TF_PROJECT}" \
+            -var="environment=${TF_ENV}" \
+            -var="backend_image=${BACKEND_IMAGE}" \
+            -var="frontend_image=${FRONTEND_IMAGE}" \
+            ${OPENAI_API_KEY:+-var="ai_provider=openai"}
+        # OPENAI_API_KEY presence flips the provider to openai automatically.
+
+      - name: Force ECS to pull the new images
+        run: |
+          CLUSTER="${TF_PROJECT}-${TF_ENV}-cluster"
+          aws ecs update-service --cluster "$CLUSTER" --service "${TF_PROJECT}-${TF_ENV}-backend" --force-new-deployment >/dev/null
+          aws ecs update-service --cluster "$CLUSTER" --service "${TF_PROJECT}-${TF_ENV}-frontend" --force-new-deployment >/dev/null
+          echo "Triggered new deployments."
+
+      - name: Show app URL
+        working-directory: infra/terraform
+        run: |
+          URL=$(terraform output -raw alb_dns_name)
+          echo "## 🚀 ScrAI deployed" >> "$GITHUB_STEP_SUMMARY"
+          echo "- App: $URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "- API docs: $URL/docs" >> "$GITHUB_STEP_SUMMARY"
+          echo "(ECS tasks may take 1-2 min to become healthy behind the ALB.)" >> "$GITHUB_STEP_SUMMARY"

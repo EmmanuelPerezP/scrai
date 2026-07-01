@@ -1,0 +1,18 @@
+aws_region  = "us-east-1"
+environment = "dev"
+project     = "scrai"
+
+# RDS
+db_instance_class = "db.t4g.micro"
+
+# Scale
+backend_desired_count  = 1
+frontend_desired_count = 1
+
+# AI: keep "stub" until you provide a key, then set "openai".
+ai_provider    = "stub"
+# openai_api_key = "sk-..."   # stored in Secrets Manager; leave unset for stub
+
+# Optionally pin specific images (CI sets these); otherwise ECR repo + :latest is used.
+# backend_image  = "123456789012.dkr.ecr.us-east-1.amazonaws.com/scrai-dev-backend:abc123"
+# frontend_image = "123456789012.dkr.ecr.us-east-1.amazonaws.com/scrai-dev-frontend:abc123"

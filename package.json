@@ -1,0 +1,26 @@
+{
+  "name": "scrai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI Scribe Notes Management Tool — monorepo",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.28.2",
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "build": "pnpm generate:api && pnpm --filter @scrai/api-client build && pnpm --filter \"./apps/*\" build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "generate:openapi": "pnpm --filter @scrai/backend generate:openapi",
+    "generate:client": "pnpm --filter @scrai/api-client generate",
+    "generate:api": "pnpm generate:openapi && pnpm generate:client",
+    "db:up": "docker compose up -d postgres",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4"
+  }
+}

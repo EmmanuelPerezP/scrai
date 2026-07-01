@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: scrai-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: scrai
+      POSTGRES_PASSWORD: scrai
+      POSTGRES_DB: scrai
+    ports:
+      # Host port is overridable to avoid clashes with other local Postgres
+      # instances (set POSTGRES_HOST_PORT=5433 if 5432 is taken).
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scrai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # LocalStack gives us a local S3 so the storage path works without real AWS creds.
+  localstack:
+    image: localstack/localstack:3
+    container_name: scrai-localstack
+    restart: unless-stopped
+    environment:
+      SERVICES: s3
+      DEBUG: "0"
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack:/var/lib/localstack
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: scrai-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      DATABASE_URL: postgres://scrai:scrai@postgres:5432/scrai
+      DATABASE_SYNCHRONIZE: "true"
+      DATABASE_RUN_SEED: "true"
+      CORS_ORIGIN: http://localhost:3000
+      AWS_REGION: us-east-1
+      S3_BUCKET: scrai-audio
+      S3_ENDPOINT: http://localstack:4566
+      S3_FORCE_PATH_STYLE: "true"
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AI_PROVIDER: stub
+    ports:
+      - "4000:4000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    container_name: scrai-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      # Browser talks to the backend on localhost; server components use the internal name.
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:4000
+      API_BASE_URL_INTERNAL: http://backend:4000
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
+  localstack:

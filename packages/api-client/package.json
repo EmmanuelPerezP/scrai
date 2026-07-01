@@ -1,0 +1,25 @@
+{
+  "name": "@scrai/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Typed API client generated from the backend OpenAPI spec",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "generate": "openapi --input ./openapi.json --output ./src/generated --client fetch --useOptions --indent 2",
+    "build": "tsc -p tsconfig.json",
+    "clean": "rimraf dist src/generated",
+    "lint": "echo \"(generated client — lint skipped)\""
+  },
+  "devDependencies": {
+    "openapi-typescript-codegen": "^0.29.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.5.4"
+  }
+}
