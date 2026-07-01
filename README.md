@@ -51,6 +51,10 @@ OpenAI (or another provider) never touches controllers/services.
 - In production the frontend and backend run behind one ALB; the browser calls
 the API same-origin under `/api`.
 
+For detailed diagrams — AWS deployment, component/data flow, the note-processing
+sequence, the ER schema, and the note lifecycle — see
+[`docs/architecture.md`](docs/architecture.md).
+
 ## Quick start (local)
 
 Prereqs: Node 20+, pnpm 10+, Docker.
