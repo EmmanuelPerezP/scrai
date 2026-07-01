@@ -1,50 +1,55 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { NotesService, PatientsService, type NoteListItemDto, type Patient } from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  getListNotesQueryKey,
+  useCreateAudioNote,
+  useCreateTextNote,
+  useListNotes,
+  useListPatients,
+  type NoteListItemDto,
+  type Patient,
+} from '@/lib/api';
 import type { GenerateInput } from '@/components/NoteComposer';
 import { useNoteDetail } from '@/hooks/useNoteDetail';
 import { useProcessingPipeline } from '@/hooks/useProcessingPipeline';
 
 export type View = 'note' | 'newNote' | 'processing';
 
+// Stable empty refs so downstream memos don't recompute every render.
+const EMPTY_NOTES: NoteListItemDto[] = [];
+const EMPTY_PATIENTS: Patient[] = [];
+
 /**
- * Top-level state for the notes app. Data loading, detail fetching, and the
- * processing animation each live in their own hook; this one owns navigation
- * (view / active note / search) and the generate action that ties them together.
+ * Top-level state for the notes app. Data fetching + caching is delegated to
+ * the generated React Query hooks; this owns navigation (view / active note /
+ * search) and the generate action that ties queries and mutations together.
  */
 export function useNotesApp() {
-  const [notes, setNotes] = useState<NoteListItemDto[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const queryClient = useQueryClient();
+  const notesQuery = useListNotes();
+  const patientsQuery = useListPatients();
+  const createText = useCreateTextNote();
+  const createAudio = useCreateAudioNote();
+  const pipeline = useProcessingPipeline();
+
   const [activeId, setActiveId] = useState<string | null>(null);
   const [view, setView] = useState<View>('note');
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const pipeline = useProcessingPipeline();
+  const notes = notesQuery.data ?? EMPTY_NOTES;
+  const patients = patientsQuery.data ?? EMPTY_PATIENTS;
+  const loading = notesQuery.isLoading || patientsQuery.isLoading;
+  const loadErr = (notesQuery.error ?? patientsQuery.error) as Error | null;
+  const loadError = loadErr ? loadErr.message : null;
+
   const { detail, detailLoading, putDetail } = useNoteDetail(activeId, view === 'note');
 
-  // Initial load
+  // Select the newest note once the list arrives.
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const [n, p] = await Promise.all([NotesService.listNotes(), PatientsService.listPatients()]);
-        if (cancelled) return;
-        setNotes(n);
-        setPatients(p);
-        if (n.length > 0) setActiveId(n[0].id);
-      } catch (err) {
-        if (!cancelled) setLoadError(err instanceof Error ? err.message : 'Failed to load');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (activeId == null && notes.length > 0) setActiveId(notes[0].id);
+  }, [notes, activeId]);
 
   const openNote = useCallback((id: string) => {
     setActiveId(id);
@@ -62,11 +67,11 @@ export function useNotesApp() {
       try {
         const created =
           input.mode === 'text'
-            ? await NotesService.createTextNote({
-                requestBody: { patientId: input.patientId, title, text: input.text, summarize: input.summarize },
+            ? await createText.mutateAsync({
+                data: { patientId: input.patientId, title, text: input.text, summarize: input.summarize },
               })
-            : await NotesService.createAudioNote({
-                formData: {
+            : await createAudio.mutateAsync({
+                data: {
                   patientId: input.patientId,
                   title,
                   summarize: input.summarize,
@@ -74,8 +79,7 @@ export function useNotesApp() {
                 },
               });
         putDetail(created);
-        const fresh = await NotesService.listNotes().catch(() => notes);
-        setNotes(fresh);
+        await queryClient.invalidateQueries({ queryKey: getListNotesQueryKey() });
         setActiveId(created.id);
         setView('note');
       } catch (err) {
@@ -85,7 +89,7 @@ export function useNotesApp() {
         pipeline.stop();
       }
     },
-    [patients, notes, pipeline, putDetail],
+    [patients, createText, createAudio, pipeline, putDetail, queryClient],
   );
 
   const filtered = useMemo(() => {

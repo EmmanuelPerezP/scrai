@@ -1,45 +1,25 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { NotesService, type NoteDetailDto } from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { getGetNoteQueryKey, useGetNote, type NoteDetailDto } from '@/lib/api';
 
 /**
- * Loads and caches the full note detail for the active note. `putDetail` lets
- * a just-created note seed the cache without a round-trip.
+ * Full note detail for the active note, via the generated React Query hook.
+ * `putDetail` seeds the cache so a just-created note shows without a round-trip.
  */
 export function useNoteDetail(activeId: string | null, enabled: boolean) {
-  const [detail, setDetail] = useState<NoteDetailDto | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const cache = useRef<Map<string, NoteDetailDto>>(new Map());
+  const query = useGetNote(activeId ?? '', {
+    query: { enabled: enabled && !!activeId },
+  });
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (!enabled || !activeId) return;
-    const cached = cache.current.get(activeId);
-    if (cached) {
-      setDetail(cached);
-      return;
-    }
-    let cancelled = false;
-    setDetailLoading(true);
-    NotesService.getNote({ id: activeId })
-      .then((d) => {
-        if (cancelled) return;
-        cache.current.set(d.id, d);
-        setDetail(d);
-      })
-      .catch(() => undefined)
-      .finally(() => {
-        if (!cancelled) setDetailLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeId, enabled]);
-
-  const putDetail = (d: NoteDetailDto) => {
-    cache.current.set(d.id, d);
-    setDetail(d);
+  const putDetail = (note: NoteDetailDto) => {
+    queryClient.setQueryData(getGetNoteQueryKey(note.id), note);
   };
 
-  return { detail, detailLoading, putDetail };
+  return {
+    detail: query.data ?? null,
+    detailLoading: query.isLoading,
+    putDetail,
+  };
 }
