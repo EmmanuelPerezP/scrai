@@ -1,6 +1,6 @@
-import { AppShell } from '@/components/AppShell';
+import { Landing } from '@/components/Landing';
 
-// The app is a single-screen client experience that talks to the API directly.
+// Marketing landing page. "Try the live demo" links to the product app at /app.
 export default function Page() {
-  return <AppShell />;
+  return <Landing />;
 }

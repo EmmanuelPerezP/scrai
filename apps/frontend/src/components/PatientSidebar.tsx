@@ -1,22 +1,19 @@
 import type { Patient } from '@/lib/api';
+import { Avatar } from '@/components/Avatar';
 import { Icon } from '@/components/Icon';
-import { avatarTint, computeAge, formatDob, initials } from '@/lib/design';
+import { capitalize, computeAge, formatDob } from '@/lib/design';
+import { BTN_OUTLINE, EYEBROW } from '@/lib/ui';
 
 export function PatientSidebar({ patient }: { patient: Patient | null }) {
   if (!patient) {
     return (
-      <aside className="sidebar">
-        <div className="eyebrow" style={{ marginBottom: 16 }}>
-          Patient
-        </div>
-        <div style={{ color: 'var(--muted)', font: '400 13px var(--font-sans)' }}>
-          Patient details unavailable.
-        </div>
+      <aside className="w-[322px] flex-none bg-paper border-l border-line overflow-y-auto pt-[22px] px-5 pb-8">
+        <div className={`${EYEBROW} mb-4`}>Patient</div>
+        <div className="font-sans text-[13px] text-muted">Patient details unavailable.</div>
       </aside>
     );
   }
 
-  const tint = avatarTint(patient.id);
   const age = computeAge(patient.dateOfBirth);
   const facts: { label: string; value: string; mono?: boolean }[] = [
     { label: 'MRN', value: patient.mrn, mono: true },
@@ -26,82 +23,58 @@ export function PatientSidebar({ patient }: { patient: Patient | null }) {
   if (patient.address) facts.push({ label: 'Address', value: patient.address });
 
   return (
-    <aside className="sidebar">
-      <div className="eyebrow" style={{ marginBottom: 16 }}>
-        Patient
-      </div>
+    <aside className="w-[322px] flex-none bg-paper border-l border-line overflow-y-auto pt-[22px] px-5 pb-8">
+      <div className={`${EYEBROW} mb-4`}>Patient</div>
 
-      <div style={{ display: 'flex', gap: 13, alignItems: 'center', marginBottom: 16 }}>
-        <div className="avatar" style={{ width: 52, height: 52, background: tint.bg, color: tint.fg, fontSize: 18 }}>
-          {initials(patient.firstName, patient.lastName)}
-        </div>
+      <div className="flex gap-[13px] items-center mb-4">
+        <Avatar seed={patient.id} first={patient.firstName} last={patient.lastName} size={52} fontSize={18} />
         <div>
-          <div style={{ font: '600 18px/1.15 var(--font-serif)', color: 'var(--ink-heading)' }}>
+          <div className="font-serif font-semibold text-[18px] leading-[1.15] text-ink-heading">
             {patient.firstName} {patient.lastName}
           </div>
-          <div className="mono" style={{ fontSize: 12, fontWeight: 500, color: '#94897a', marginTop: 2 }}>
+          <div className="font-mono font-medium text-[12px] text-[#94897a] mt-0.5">
             {patient.mrn} · {capitalize(patient.sex)}
           </div>
         </div>
       </div>
 
       {patient.primaryConditions ? (
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '5px 11px',
-            borderRadius: 8,
-            background: 'var(--sage-tint)',
-            color: '#3c5440',
-            font: '600 12px var(--font-sans)',
-            marginBottom: 18,
-          }}
-        >
+        <div className="inline-flex items-center gap-1.5 px-[11px] py-[5px] rounded-lg bg-sage-tint text-[#3c5440] font-sans font-semibold text-xs mb-[18px]">
           <Icon name="cardiology" size={16} />
           {patient.primaryConditions}
         </div>
       ) : null}
 
-      <div className="facts" style={{ marginBottom: 14 }}>
+      <div className="bg-white border border-line-card rounded-[13px] overflow-hidden mb-[14px]">
         {facts.map((f) => (
-          <div className="fact" key={f.label}>
-            <div className="fact__label">{f.label}</div>
-            <div className={`fact__value${f.mono ? ' mono' : ''}`}>{f.value}</div>
+          <div
+            key={f.label}
+            className="flex items-center justify-between gap-3 px-[14px] py-[11px] border-b border-[#f1ebdf] last:border-b-0"
+          >
+            <div className="font-sans text-[12.5px] text-[#948a7b]">{f.label}</div>
+            <div className={`font-medium text-[13px] text-body-soft text-right ${f.mono ? 'font-mono' : 'font-sans'}`}>
+              {f.value}
+            </div>
           </div>
         ))}
       </div>
 
       {patient.primaryConditions ? (
-        <div className="info-card" style={{ marginBottom: 14 }}>
-          <Icon name="clinical_notes" />
+        <div className="flex gap-[10px] items-start px-[14px] py-3 bg-warn-bg border border-warn-border rounded-xl mb-[14px]">
+          <Icon name="clinical_notes" size={19} style={{ color: '#b0603c', marginTop: 1 }} />
           <div>
-            <div
-              style={{
-                font: '600 12px var(--font-sans)',
-                color: '#9a4f2e',
-                textTransform: 'uppercase',
-                letterSpacing: '.04em',
-              }}
-            >
+            <div className="font-sans font-semibold text-[12px] text-[#9a4f2e] uppercase tracking-[0.04em]">
               Primary conditions
             </div>
-            <div style={{ font: '500 13.5px var(--font-sans)', color: '#6e4127', marginTop: 2 }}>
-              {patient.primaryConditions}
-            </div>
+            <div className="font-sans font-medium text-[13.5px] text-[#6e4127] mt-0.5">{patient.primaryConditions}</div>
           </div>
         </div>
       ) : null}
 
-      <button className="btn-outline">
+      <button className={BTN_OUTLINE}>
         <Icon name="folder_shared" size={18} />
         View full chart
       </button>
     </aside>
   );
-}
-
-function capitalize(s: string): string {
-  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }

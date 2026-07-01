@@ -28,6 +28,25 @@ export function initials(first?: string, last?: string): string {
   return `${(first ?? '').charAt(0)}${(last ?? '').charAt(0)}`.toUpperCase() || '·';
 }
 
+export function capitalize(s: string): string {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
+/** Single source of truth for note-status presentation (chip + pill). */
+export const NOTE_STATUS_META: Record<string, { label: string; fg: string; bg: string; icon: string }> = {
+  completed: { label: 'Complete', fg: '#4f6b52', bg: '#e7eee4', icon: 'verified' },
+  failed: { label: 'Failed', fg: '#a85636', bg: '#f3e2d8', icon: 'error' },
+  processing: { label: 'Processing', fg: '#7a6326', bg: '#efe6ce', icon: 'progress_activity' },
+  pending: { label: 'Pending', fg: '#7a6326', bg: '#efe6ce', icon: 'schedule' },
+};
+export const noteStatusMeta = (status: string) => NOTE_STATUS_META[status] ?? NOTE_STATUS_META.pending;
+
+export const NOTE_SOURCE_META: Record<string, { label: string; icon: string }> = {
+  audio: { label: 'Audio', icon: 'graphic_eq' },
+  text: { label: 'Text', icon: 'edit_note' },
+};
+export const noteSourceMeta = (source: string) => NOTE_SOURCE_META[source] ?? NOTE_SOURCE_META.text;
+
 /** Deterministic avatar tint from a stable seed (e.g. patient id). */
 export function avatarTint(seed: string) {
   let h = 0;
