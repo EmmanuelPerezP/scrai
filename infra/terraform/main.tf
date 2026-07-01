@@ -334,6 +334,7 @@ module "backend" {
     PORT                 = tostring(local.backend_port)
     DATABASE_SYNCHRONIZE = "true"
     DATABASE_RUN_SEED    = "true"
+    DATABASE_SSL         = "true" # RDS enforces TLS
     CORS_ORIGIN          = "*"
     AWS_REGION           = var.aws_region
     S3_BUCKET            = aws_s3_bucket.audio.bucket

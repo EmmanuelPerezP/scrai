@@ -42,3 +42,8 @@ crash.log
 
 # uploads (local)
 uploads/
+
+# design handoff (reference only)
+ScrAI Notes Management Tool.zip
+design_handoff_scrai/
+*.dc.html
