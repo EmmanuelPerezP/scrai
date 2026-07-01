@@ -12,4 +12,11 @@ module.exports = {
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-explicit-any': 'warn',
   },
+  overrides: [
+    {
+      // Tests use `any` freely for lightweight repository/service mocks.
+      files: ['**/*.spec.ts'],
+      rules: { '@typescript-eslint/no-explicit-any': 'off' },
+    },
+  ],
 };

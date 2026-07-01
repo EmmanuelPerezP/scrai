@@ -74,7 +74,11 @@ export class OpenAiProcessor implements AiProcessor {
       throw new Error('Cannot transcribe an empty audio file');
     }
     this.logger.log(`transcribing ${filename} (${audio.length} bytes) via ${this.transcribeModel}`);
-    const file = await toFile(audio, filename);
+    // Whisper detects the format from the filename extension and accepts
+    // ogg/oga/webm but not a bare `.opus`. A `.opus` file is Ogg-Opus, so
+    // presenting it as `.ogg` lets Whisper decode it without transcoding.
+    const whisperName = normalizeAudioName(filename);
+    const file = await toFile(audio, whisperName);
     const result: unknown = await this.client.audio.transcriptions.create({
       file,
       model: this.transcribeModel,
@@ -112,4 +116,12 @@ export class OpenAiProcessor implements AiProcessor {
     }
     return { text };
   }
+}
+
+/**
+ * Map audio filenames to an extension the Whisper API accepts. `.opus` files
+ * are Ogg-Opus, which Whisper decodes when the file is labelled `.ogg`.
+ */
+export function normalizeAudioName(filename: string): string {
+  return /\.opus$/i.test(filename) ? filename.replace(/\.opus$/i, '.ogg') : filename;
 }

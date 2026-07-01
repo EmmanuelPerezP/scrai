@@ -1,6 +1,18 @@
 import { ConfigService } from '@nestjs/config';
 import { AppConfig } from '../config/configuration';
-import { OpenAiProcessor } from './openai.processor';
+import { OpenAiProcessor, normalizeAudioName } from './openai.processor';
+
+describe('normalizeAudioName', () => {
+  it('relabels .opus as .ogg for Whisper (Ogg-Opus)', () => {
+    expect(normalizeAudioName('visit.opus')).toBe('visit.ogg');
+    expect(normalizeAudioName('VISIT.OPUS')).toBe('VISIT.ogg');
+  });
+  it('leaves other formats untouched', () => {
+    expect(normalizeAudioName('visit.mp3')).toBe('visit.mp3');
+    expect(normalizeAudioName('visit.m4a')).toBe('visit.m4a');
+    expect(normalizeAudioName('visit.ogg')).toBe('visit.ogg');
+  });
+});
 
 /** Minimal ConfigService stub returning the `ai` config slice. */
 function makeConfig(apiKey?: string): ConfigService<AppConfig, true> {

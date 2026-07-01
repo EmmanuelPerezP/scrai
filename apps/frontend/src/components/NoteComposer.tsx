@@ -101,7 +101,8 @@ export function NoteComposer({
         <input
           ref={inputRef}
           type="file"
-          accept="audio/*"
+          // Some browsers don't tag .opus as audio/*, so list it explicitly.
+          accept="audio/*,.opus,.ogg"
           style={{ display: 'none' }}
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         />
@@ -155,7 +156,7 @@ export function NoteComposer({
               </div>
               <div style={{ font: '600 15px var(--font-sans)', color: 'var(--body)' }}>Drop an audio file or browse</div>
               <div style={{ font: '400 12.5px var(--font-sans)', color: '#948a7b', marginTop: 4, marginBottom: 16 }}>
-                MP3, WAV, M4A · up to 25 MB
+                MP3, WAV, M4A, OPUS · up to 25 MB
               </div>
               <button
                 onClick={() => inputRef.current?.click()}

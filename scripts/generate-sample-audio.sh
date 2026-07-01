@@ -55,4 +55,14 @@ gen "routine-stable-visit" \
 are within normal limits. Continue current medications and plan of care. Follow up \
 as scheduled."
 
+# Also emit Ogg-Opus variants (the app supports .opus) when ffmpeg is available.
+if command -v ffmpeg >/dev/null; then
+  echo "Emitting .opus variants (ffmpeg found):"
+  for f in "$OUT"/*.m4a; do
+    base="${f%.m4a}"
+    ffmpeg -y -i "$f" -c:a libopus -b:a 24k "$base.opus" >/dev/null 2>&1
+    printf '  %-34s %s\n' "$(basename "$base").opus" "$(du -h "$base.opus" | cut -f1)"
+  done
+fi
+
 echo "Done. Upload any of these in the app's 'New clinical note → Upload audio' flow."

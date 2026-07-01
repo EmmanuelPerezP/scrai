@@ -13,6 +13,10 @@ audio**.
 
 ## Regenerate
 
+When `ffmpeg` is available the script also writes an Ogg-Opus (`.opus`) variant
+of each file — the app accepts `.opus` too (it's relabelled `.ogg` for Whisper,
+which decodes the same container).
+
 The `.m4a` files under `audio/` are produced by
 [`scripts/generate-sample-audio.sh`](../scripts/generate-sample-audio.sh) using
 macOS `say` + `afconvert` (both built in). Re-run any time:
