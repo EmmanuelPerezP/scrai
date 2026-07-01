@@ -21,12 +21,14 @@ resource "aws_budgets_budget" "monthly" {
     subscriber_email_addresses = [var.budget_alert_email]
   }
 
+  # At 100% ($40) also trigger the hard-stop Lambda via SNS (see cost-guard.tf).
   notification {
     comparison_operator        = "GREATER_THAN"
     threshold                  = 100
     threshold_type             = "PERCENTAGE"
     notification_type          = "ACTUAL"
     subscriber_email_addresses = [var.budget_alert_email]
+    subscriber_sns_topic_arns  = [aws_sns_topic.cost_guard.arn]
   }
 
   notification {
