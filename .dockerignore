@@ -1,0 +1,19 @@
+# Keep the build context small and reproducible (matches a fresh CI checkout).
+# Dependencies are installed inside the image; source is copied via COPY . .
+**/node_modules
+**/dist
+**/.next
+**/out
+.git
+*.log
+
+# never ship secrets into an image
+.env
+**/.env
+**/.env.local
+infra/terraform/*.tfvars
+infra/terraform/.terraform
+
+# not needed at build time
+**/*.tsbuildinfo
+uploads

@@ -16,7 +16,11 @@ FROM base AS build
 ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:4000
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_TELEMETRY_DISABLED=1
+# pnpm keeps each package's bins in its own node_modules/.bin (e.g. `next`,
+# `tsc`), so copy the per-package node_modules too — not just the root.
 COPY --from=deps /repo/node_modules ./node_modules
+COPY --from=deps /repo/apps/frontend/node_modules ./apps/frontend/node_modules
+COPY --from=deps /repo/packages/api-client/node_modules ./packages/api-client/node_modules
 COPY . .
 RUN pnpm --filter @scrai/api-client build \
  && pnpm --filter @scrai/frontend build
