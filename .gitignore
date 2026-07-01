@@ -9,9 +9,10 @@ build/
 out/
 *.tsbuildinfo
 
-# generated api client
-packages/api-client/src/generated/
-openapi.json
+# NOTE: the generated API client (packages/api-client/src/generated/) and the
+# OpenAPI spec (packages/api-client/openapi.json) are intentionally committed so
+# Docker/CI image builds are self-contained (no DB needed to regenerate them).
+# Refresh them with `pnpm generate:api` after changing the backend API.
 
 # env
 .env

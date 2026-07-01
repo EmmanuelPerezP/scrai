@@ -1,0 +1,570 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Service liveness probe"
+          }
+        },
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/patients": {
+      "get": {
+        "operationId": "listPatients",
+        "summary": "",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Patient"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "patients"
+        ]
+      },
+      "post": {
+        "operationId": "createPatient",
+        "summary": "",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePatientDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Patient"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "patients"
+        ]
+      }
+    },
+    "/patients/{id}": {
+      "get": {
+        "operationId": "getPatient",
+        "summary": "",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Patient"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "patients"
+        ]
+      }
+    },
+    "/notes": {
+      "get": {
+        "operationId": "listNotes",
+        "summary": "",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NoteListItemDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "notes"
+        ]
+      }
+    },
+    "/notes/{id}": {
+      "get": {
+        "operationId": "getNote",
+        "summary": "",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "notes"
+        ]
+      }
+    },
+    "/notes/text": {
+      "post": {
+        "operationId": "createTextNote",
+        "summary": "",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTextNoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "notes"
+        ]
+      }
+    },
+    "/notes/audio": {
+      "post": {
+        "operationId": "createAudioNote",
+        "summary": "",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "patientId",
+                  "file"
+                ],
+                "properties": {
+                  "patientId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "summarize": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "notes"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "ScrAI — AI Scribe Notes API",
+    "description": "Create and view AI-generated clinical notes associated with patients.",
+    "version": "0.1.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "patients",
+      "description": ""
+    },
+    {
+      "name": "notes",
+      "description": ""
+    },
+    {
+      "name": "health",
+      "description": ""
+    }
+  ],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "Patient": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mrn": {
+            "type": "string",
+            "example": "MRN-001",
+            "description": "Medical record number (mock)"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "Jane"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Doe"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "example": "1955-04-12",
+            "description": "Date of birth (YYYY-MM-DD)"
+          },
+          "sex": {
+            "type": "string",
+            "enum": [
+              "male",
+              "female",
+              "other",
+              "unknown"
+            ],
+            "example": "female"
+          },
+          "address": {
+            "type": "string",
+            "nullable": true,
+            "example": "123 Maple St, Springfield, IL"
+          },
+          "primaryConditions": {
+            "type": "string",
+            "nullable": true,
+            "example": "Hypertension, Type 2 Diabetes"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "mrn",
+          "firstName",
+          "lastName",
+          "dateOfBirth",
+          "sex",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreatePatientDto": {
+        "type": "object",
+        "properties": {
+          "mrn": {
+            "type": "string",
+            "example": "MRN-004"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "John"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Smith"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "example": "1960-08-21"
+          },
+          "sex": {
+            "type": "string",
+            "enum": [
+              "male",
+              "female",
+              "other",
+              "unknown"
+            ],
+            "example": "male"
+          },
+          "address": {
+            "type": "string"
+          },
+          "primaryConditions": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mrn",
+          "firstName",
+          "lastName",
+          "dateOfBirth",
+          "sex"
+        ]
+      },
+      "NoteListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "patientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "text",
+              "audio"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "processing",
+              "completed",
+              "failed"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "description": "Optional clinician-provided title"
+          },
+          "rawText": {
+            "type": "string",
+            "nullable": true,
+            "description": "Raw input: typed text, or the transcription produced from audio"
+          },
+          "processedText": {
+            "type": "string",
+            "nullable": true,
+            "description": "AI-structured output (e.g. SOAP summary) derived from the raw text"
+          },
+          "audioKey": {
+            "type": "string",
+            "nullable": true,
+            "description": "S3 object key for the uploaded audio file"
+          },
+          "audioFilename": {
+            "type": "string",
+            "nullable": true,
+            "description": "Original uploaded audio filename"
+          },
+          "error": {
+            "type": "string",
+            "nullable": true,
+            "description": "Error detail if processing failed"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "preview": {
+            "type": "string",
+            "description": "First ~160 chars of the best available note text"
+          },
+          "patient": {
+            "$ref": "#/components/schemas/Patient"
+          }
+        },
+        "required": [
+          "id",
+          "patientId",
+          "source",
+          "status",
+          "createdAt",
+          "updatedAt",
+          "preview",
+          "patient"
+        ]
+      },
+      "NoteDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "patientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "text",
+              "audio"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "processing",
+              "completed",
+              "failed"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "description": "Optional clinician-provided title"
+          },
+          "rawText": {
+            "type": "string",
+            "nullable": true,
+            "description": "Raw input: typed text, or the transcription produced from audio"
+          },
+          "processedText": {
+            "type": "string",
+            "nullable": true,
+            "description": "AI-structured output (e.g. SOAP summary) derived from the raw text"
+          },
+          "audioKey": {
+            "type": "string",
+            "nullable": true,
+            "description": "S3 object key for the uploaded audio file"
+          },
+          "audioFilename": {
+            "type": "string",
+            "nullable": true,
+            "description": "Original uploaded audio filename"
+          },
+          "error": {
+            "type": "string",
+            "nullable": true,
+            "description": "Error detail if processing failed"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "audioUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Temporary signed URL to stream the audio file"
+          }
+        },
+        "required": [
+          "id",
+          "patientId",
+          "source",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateTextNoteDto": {
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "example": "Follow-up visit"
+          },
+          "text": {
+            "type": "string",
+            "example": "Patient reports mild headache for two days..."
+          },
+          "summarize": {
+            "type": "boolean",
+            "default": true,
+            "description": "Generate an AI SOAP summary in addition to storing the raw text"
+          }
+        },
+        "required": [
+          "patientId",
+          "text"
+        ]
+      }
+    }
+  }
+}
