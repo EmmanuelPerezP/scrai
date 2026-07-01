@@ -76,3 +76,15 @@ variable "ai_provider" {
   type        = string
   default     = "stub"
 }
+
+variable "monthly_budget_usd" {
+  description = "Upper monthly AWS cost budget (USD). Alerts fire at 50% and 100% of this."
+  type        = number
+  default     = 40
+}
+
+variable "budget_alert_email" {
+  description = "Email address that receives budget alerts."
+  type        = string
+  default     = "emmanuelperezp@gmail.com"
+}
