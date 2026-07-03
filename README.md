@@ -15,7 +15,7 @@ its patient details.
 | ---------- | ---------------------------------------------------------------------- |
 | Frontend   | Next.js 14 (App Router) + TypeScript                                   |
 | Backend    | NestJS + TypeScript, REST, Swagger/OpenAPI                             |
-| API client | Auto-generated TS client from the OpenAPI spec (`@scrai/api-client`)   |
+| API client | Generated TanStack Query hooks from the OpenAPI spec via Orval (`@scrai/api-client`) |
 | Database   | PostgreSQL via TypeORM                                                 |
 | Storage    | S3 for audio (LocalStack locally, real S3 on AWS)                      |
 | AI         | Pluggable `AiProcessor` — `stub` (default) or `openai` (Whisper + GPT) |
@@ -28,9 +28,9 @@ Monorepo managed with **pnpm workspaces**:
 ```
 apps/
   backend/      NestJS API (patients, notes, AI, S3, Swagger, seed)
-  frontend/     Next.js UI (list, detail + patient sidebar, new-note form)
+  frontend/     Next.js SPA (notes list, detail + patient sidebar, composer) + landing
 packages/
-  api-client/   Generated typed client (OpenAPI -> fetch client)
+  api-client/   Generated React Query hooks (OpenAPI → Orval)
 infra/
   terraform/    AWS infrastructure as code
 .github/        CI + deploy workflows
@@ -52,6 +52,8 @@ the single source of truth for the typed client the frontend uses.
 OpenAI (or another provider) never touches controllers/services.
 - In production the frontend and backend run behind one ALB; the browser calls
 the API same-origin under `/api`.
+- Audio is uploaded **directly to S3** via a presigned PUT (never streamed
+through the API); playback streams from S3 through a short-lived redirect endpoint.
 
 For detailed diagrams — AWS deployment, component/data flow, the note-processing
 sequence, the ER schema, and the note lifecycle — see
@@ -98,35 +100,39 @@ The backend seeds 2–3 mock patients on first boot (idempotent).
 ### Or run the whole thing in Docker
 
 ```bash
-pnpm install && pnpm generate:api      # generate the client first (compiled into the frontend image)
+pnpm install
 docker compose up --build
 ```
 
-> The frontend image compiles the generated client, so `pnpm generate:api` must
-> have produced `packages/api-client/src/generated` before building images.
+> The generated API client is committed to the repo, so images build as-is.
+> Re-run `pnpm generate:api` only after you change the backend API.
 
 ## Core flows
 
-1. **New note** (`/notes/new`): pick a seeded patient, choose *typed text* or
-  *audio upload*, optionally request an AI SOAP summary, submit.
-2. **List** (`/`): all notes with patient name, timestamp, source/status, and a
-  preview.
-3. **Detail** (`/notes/[id]`): transcription/summary plus a patient sidebar; if
-  the note came from audio, a signed S3 URL lets you play it back.
+The product is a single-screen SPA at **`/app`** (a marketing landing lives at `/`):
+
+1. **New note**: pick a seeded patient, choose *typed text* or *audio upload*
+  (audio goes straight to S3 via a presigned PUT), optionally request an AI SOAP
+  summary, and submit.
+2. **List**: all notes with patient name, timestamp, source/status, and a preview.
+3. **Detail**: transcription/summary plus a patient sidebar; audio notes stream
+  from `GET /api/notes/:id/audio` (which 302-redirects to a signed S3 URL).
 
 ## API
 
 
-| Method | Path                | Description                                    |
-| ------ | ------------------- | ---------------------------------------------- |
-| GET    | `/api/patients`     | List patients                                  |
-| GET    | `/api/patients/:id` | Get a patient                                  |
-| POST   | `/api/patients`     | Create a patient                               |
-| GET    | `/api/notes`        | List notes (with preview + patient)            |
-| GET    | `/api/notes/:id`    | Get a note (with signed audio URL)             |
-| POST   | `/api/notes/text`   | Create a note from typed text                  |
-| POST   | `/api/notes/audio`  | Create a note from an audio upload (multipart) |
-| GET    | `/api/health`       | Health probe                                   |
+| Method | Path                          | Description                                    |
+| ------ | ----------------------------- | ---------------------------------------------- |
+| GET    | `/api/patients`               | List patients                                  |
+| GET    | `/api/patients/:id`           | Get a patient                                  |
+| POST   | `/api/patients`               | Create a patient                               |
+| GET    | `/api/notes`                  | List notes (with preview + patient)            |
+| GET    | `/api/notes/:id`              | Get a note (pure cacheable data)               |
+| GET    | `/api/notes/:id/audio`        | 302-redirect to a signed S3 URL for playback   |
+| POST   | `/api/notes/text`             | Create a note from typed text                  |
+| POST   | `/api/notes/audio/upload-url` | Presigned S3 PUT URL for direct audio upload   |
+| POST   | `/api/notes/audio`            | Create a note from an already-uploaded object  |
+| GET    | `/api/health`                 | Health probe                                   |
 
 
 Interactive docs and the full schema live at `/docs`.
@@ -151,8 +157,6 @@ and `summarize(rawText)`. The provider is chosen with `AI_PROVIDER`:
 > take raw audio); GPT-4o-mini handles text→SOAP. Keeping both on OpenAI means
 > one API key and one bill. The interface makes swapping either step (e.g. Groq
 > Whisper, Deepgram, or Anthropic Claude for the summary) a one-file change.
->
-> The API key is supplied in the final credentials step.
 
 ## Deploy to AWS
 
@@ -181,7 +185,8 @@ scope; migrations would be the production path).
 for large audio files in production.
 - No auth — out of scope for the exercise.
 - HTTP-only ALB (no TLS) to keep the IaC self-contained.
-- The generated API client is git-ignored and produced from the spec on demand.
+- The generated API client is committed (so Docker builds and consumers work
+without regenerating); refresh it with `pnpm generate:api` after API changes.
 
 ## Useful scripts
 
