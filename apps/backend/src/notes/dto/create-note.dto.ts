@@ -38,13 +38,48 @@ export class CreateTextNoteDto {
 }
 
 /**
- * Multipart form fields that accompany an audio upload.
- * (The file itself is handled by the file interceptor.)
+ * Request a presigned PUT URL so the browser can upload an audio file directly
+ * to S3 (the bytes never stream through the API).
+ */
+export class CreateAudioUploadUrlDto {
+  @ApiProperty({ example: 'visit.m4a', description: 'Original filename (used to build the object key)' })
+  @IsString()
+  @MinLength(1)
+  filename: string;
+
+  @ApiProperty({ example: 'audio/mp4', description: 'MIME type; the PUT must send this same Content-Type' })
+  @IsString()
+  @MinLength(1)
+  contentType: string;
+}
+
+/** Presigned upload target returned to the browser. */
+export class AudioUploadUrlDto {
+  @ApiProperty({ description: 'S3 object key to pass back when creating the note' })
+  key: string;
+
+  @ApiProperty({ description: 'Presigned PUT URL the browser uploads the file to' })
+  url: string;
+}
+
+/**
+ * Create a note from an audio file that was already uploaded to S3 via a
+ * presigned PUT. References the object by key rather than carrying the bytes.
  */
 export class CreateAudioNoteDto {
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
   patientId: string;
+
+  @ApiProperty({ description: 'S3 object key returned from /notes/audio/upload-url' })
+  @IsString()
+  @MinLength(1)
+  audioKey: string;
+
+  @ApiProperty({ example: 'visit.m4a', description: 'Original filename, stored for display' })
+  @IsString()
+  @MinLength(1)
+  audioFilename: string;
 
   @ApiPropertyOptional({ example: 'Home visit recording' })
   @IsOptional()

@@ -1,24 +1,11 @@
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
-  BadRequestException,
-  Body,
-  Controller,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Post,
-  UploadedFile,
-  UseInterceptors,
-} from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import {
-  ApiBody,
-  ApiConsumes,
-  ApiCreatedResponse,
-  ApiOkResponse,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
-import { CreateAudioNoteDto, CreateTextNoteDto } from './dto/create-note.dto';
+  AudioUploadUrlDto,
+  CreateAudioNoteDto,
+  CreateAudioUploadUrlDto,
+  CreateTextNoteDto,
+} from './dto/create-note.dto';
 import { NoteDetailDto, NoteListItemDto } from './dto/note-response.dto';
 import { NotesService } from './notes.service';
 
@@ -48,34 +35,20 @@ export class NotesController {
     return this.notesService.createFromText(dto);
   }
 
+  @Post('audio/upload-url')
+  @ApiOperation({
+    operationId: 'createAudioUploadUrl',
+    summary: 'Get a presigned PUT URL for uploading an audio file directly to S3',
+  })
+  @ApiCreatedResponse({ type: AudioUploadUrlDto })
+  createAudioUploadUrl(@Body() dto: CreateAudioUploadUrlDto): Promise<AudioUploadUrlDto> {
+    return this.notesService.createAudioUploadUrl(dto);
+  }
+
   @Post('audio')
   @ApiOperation({ operationId: 'createAudioNote' })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['patientId', 'file'],
-      properties: {
-        patientId: { type: 'string', format: 'uuid' },
-        title: { type: 'string' },
-        summarize: { type: 'boolean', default: true },
-        file: { type: 'string', format: 'binary' },
-      },
-    },
-  })
   @ApiCreatedResponse({ type: NoteDetailDto })
-  @UseInterceptors(
-    FileInterceptor('file', {
-      limits: { fileSize: 25 * 1024 * 1024 }, // 25 MB, matches Whisper's limit
-    }),
-  )
-  createFromAudio(
-    @Body() dto: CreateAudioNoteDto,
-    @UploadedFile() file?: Express.Multer.File,
-  ): Promise<NoteDetailDto> {
-    if (!file) {
-      throw new BadRequestException('An audio "file" is required');
-    }
-    return this.notesService.createFromAudio(dto, file);
+  createFromAudio(@Body() dto: CreateAudioNoteDto): Promise<NoteDetailDto> {
+    return this.notesService.createFromAudio(dto);
   }
 }

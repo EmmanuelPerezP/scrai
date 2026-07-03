@@ -4,11 +4,14 @@ import { Repository } from 'typeorm';
 import { AI_PROCESSOR, AiProcessor } from '../ai/ai.types';
 import { PatientsService } from '../patients/patients.service';
 import { StorageService } from '../storage/storage.service';
-import { CreateAudioNoteDto, CreateTextNoteDto } from './dto/create-note.dto';
+import {
+  AudioUploadUrlDto,
+  CreateAudioNoteDto,
+  CreateAudioUploadUrlDto,
+  CreateTextNoteDto,
+} from './dto/create-note.dto';
 import { NoteDetailDto, NoteListItemDto } from './dto/note-response.dto';
 import { Note, NoteSource, NoteStatus } from './note.entity';
-
-type UploadedAudio = { buffer: Buffer; originalname: string; mimetype: string };
 
 @Injectable()
 export class NotesService {
@@ -57,11 +60,18 @@ export class NotesService {
     return this.findOne(note.id);
   }
 
-  /** Create a note from an uploaded audio file: store it, transcribe, summarize. */
-  async createFromAudio(dto: CreateAudioNoteDto, file: UploadedAudio): Promise<NoteDetailDto> {
-    await this.patients.findOne(dto.patientId);
+  /** Mint a presigned PUT URL for the browser to upload an audio file to S3. */
+  createAudioUploadUrl(dto: CreateAudioUploadUrlDto): Promise<AudioUploadUrlDto> {
+    return this.storage.createPresignedUpload(dto.filename, dto.contentType);
+  }
 
-    const audioKey = await this.storage.uploadAudio(file);
+  /**
+   * Create a note from audio already uploaded to S3 (via a presigned PUT). The
+   * bytes are pulled back from S3 only for the transcription step, not for the
+   * upload — keeping large files off the request path.
+   */
+  async createFromAudio(dto: CreateAudioNoteDto): Promise<NoteDetailDto> {
+    await this.patients.findOne(dto.patientId);
 
     let note = await this.notes.save(
       this.notes.create({
@@ -69,13 +79,14 @@ export class NotesService {
         title: dto.title ?? null,
         source: NoteSource.Audio,
         status: NoteStatus.Processing,
-        audioKey,
-        audioFilename: file.originalname,
+        audioKey: dto.audioKey,
+        audioFilename: dto.audioFilename,
       }),
     );
 
     try {
-      const transcription = await this.ai.transcribe(file.buffer, file.originalname);
+      const buffer = await this.storage.downloadAudio(dto.audioKey);
+      const transcription = await this.ai.transcribe(buffer, dto.audioFilename);
       note.rawText = transcription.text;
       note = await this.notes.save(note);
       note = await this.runSummary(note, dto.summarize ?? true);

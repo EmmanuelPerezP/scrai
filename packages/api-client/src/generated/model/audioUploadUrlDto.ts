@@ -6,9 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type CreateAudioNoteBody = {
-  patientId: string;
-  title?: string;
-  summarize?: boolean;
-  file: Blob;
-};
+export interface AudioUploadUrlDto {
+  /** S3 object key to pass back when creating the note */
+  key: string;
+  /** Presigned PUT URL the browser uploads the file to */
+  url: string;
+}

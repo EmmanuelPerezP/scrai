@@ -189,6 +189,38 @@
         ]
       }
     },
+    "/notes/audio/upload-url": {
+      "post": {
+        "operationId": "createAudioUploadUrl",
+        "summary": "Get a presigned PUT URL for uploading an audio file directly to S3",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAudioUploadUrlDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudioUploadUrlDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "notes"
+        ]
+      }
+    },
     "/notes/audio": {
       "post": {
         "operationId": "createAudioNote",
@@ -197,30 +229,9 @@
         "requestBody": {
           "required": true,
           "content": {
-            "multipart/form-data": {
+            "application/json": {
               "schema": {
-                "type": "object",
-                "required": [
-                  "patientId",
-                  "file"
-                ],
-                "properties": {
-                  "patientId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "title": {
-                    "type": "string"
-                  },
-                  "summarize": {
-                    "type": "boolean",
-                    "default": true
-                  },
-                  "file": {
-                    "type": "string",
-                    "format": "binary"
-                  }
-                }
+                "$ref": "#/components/schemas/CreateAudioNoteDto"
               }
             }
           }
@@ -563,6 +574,74 @@
         "required": [
           "patientId",
           "text"
+        ]
+      },
+      "CreateAudioUploadUrlDto": {
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "string",
+            "example": "visit.m4a",
+            "description": "Original filename (used to build the object key)"
+          },
+          "contentType": {
+            "type": "string",
+            "example": "audio/mp4",
+            "description": "MIME type; the PUT must send this same Content-Type"
+          }
+        },
+        "required": [
+          "filename",
+          "contentType"
+        ]
+      },
+      "AudioUploadUrlDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "S3 object key to pass back when creating the note"
+          },
+          "url": {
+            "type": "string",
+            "description": "Presigned PUT URL the browser uploads the file to"
+          }
+        },
+        "required": [
+          "key",
+          "url"
+        ]
+      },
+      "CreateAudioNoteDto": {
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "audioKey": {
+            "type": "string",
+            "description": "S3 object key returned from /notes/audio/upload-url"
+          },
+          "audioFilename": {
+            "type": "string",
+            "example": "visit.m4a",
+            "description": "Original filename, stored for display"
+          },
+          "title": {
+            "type": "string",
+            "example": "Home visit recording"
+          },
+          "summarize": {
+            "type": "boolean",
+            "default": true,
+            "description": "Generate an AI SOAP summary from the transcription"
+          }
+        },
+        "required": [
+          "patientId",
+          "audioKey",
+          "audioFilename"
         ]
       }
     }

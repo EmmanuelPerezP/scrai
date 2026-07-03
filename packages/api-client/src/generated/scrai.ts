@@ -25,7 +25,9 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  CreateAudioNoteBody,
+  AudioUploadUrlDto,
+  CreateAudioNoteDto,
+  CreateAudioUploadUrlDto,
   CreatePatientDto,
   CreateTextNoteDto,
   NoteDetailDto,
@@ -658,6 +660,77 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getCreateTextNoteMutationOptions(options), queryClient);
     }
 
+export const getCreateAudioUploadUrlUrl = () => {
+
+
+
+
+  return `/notes/audio/upload-url`
+}
+
+/**
+ * @summary Get a presigned PUT URL for uploading an audio file directly to S3
+ */
+export const createAudioUploadUrl = async (createAudioUploadUrlDto: CreateAudioUploadUrlDto, options?: RequestInit): Promise<AudioUploadUrlDto> => {
+
+  return customInstance<AudioUploadUrlDto>(getCreateAudioUploadUrlUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createAudioUploadUrlDto)
+  }
+);}
+
+
+
+
+
+export const getCreateAudioUploadUrlMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAudioUploadUrl>>, TError,{data: CreateAudioUploadUrlDto}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAudioUploadUrl>>, TError,{data: CreateAudioUploadUrlDto}, TContext> => {
+
+const mutationKey = ['createAudioUploadUrl'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAudioUploadUrl>>, {data: CreateAudioUploadUrlDto}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAudioUploadUrl(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAudioUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof createAudioUploadUrl>>>
+    export type CreateAudioUploadUrlMutationBody = CreateAudioUploadUrlDto
+    export type CreateAudioUploadUrlMutationError = unknown
+
+    /**
+ * @summary Get a presigned PUT URL for uploading an audio file directly to S3
+ */
+export const useCreateAudioUploadUrl = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAudioUploadUrl>>, TError,{data: CreateAudioUploadUrlDto}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createAudioUploadUrl>>,
+        TError,
+        {data: CreateAudioUploadUrlDto},
+        TContext
+      > => {
+      return useMutation(getCreateAudioUploadUrlMutationOptions(options), queryClient);
+    }
+
 export const getCreateAudioNoteUrl = () => {
 
 
@@ -666,23 +739,14 @@ export const getCreateAudioNoteUrl = () => {
   return `/notes/audio`
 }
 
-export const createAudioNote = async (createAudioNoteBody: CreateAudioNoteBody, options?: RequestInit): Promise<NoteDetailDto> => {
-    const formData = new FormData();
-formData.append(`patientId`, createAudioNoteBody.patientId);
-if(createAudioNoteBody.title !== undefined) {
- formData.append(`title`, createAudioNoteBody.title);
- }
-if(createAudioNoteBody.summarize !== undefined) {
- formData.append(`summarize`, createAudioNoteBody.summarize.toString())
- }
-formData.append(`file`, createAudioNoteBody.file);
+export const createAudioNote = async (createAudioNoteDto: CreateAudioNoteDto, options?: RequestInit): Promise<NoteDetailDto> => {
 
   return customInstance<NoteDetailDto>(getCreateAudioNoteUrl(),
   {
     ...options,
-    method: 'POST'
-    ,
-    body: formData
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createAudioNoteDto)
   }
 );}
 
@@ -691,8 +755,8 @@ formData.append(`file`, createAudioNoteBody.file);
 
 
 export const getCreateAudioNoteMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAudioNote>>, TError,{data: CreateAudioNoteBody}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof createAudioNote>>, TError,{data: CreateAudioNoteBody}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAudioNote>>, TError,{data: CreateAudioNoteDto}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAudioNote>>, TError,{data: CreateAudioNoteDto}, TContext> => {
 
 const mutationKey = ['createAudioNote'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -704,7 +768,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAudioNote>>, {data: CreateAudioNoteBody}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAudioNote>>, {data: CreateAudioNoteDto}> = (props) => {
           const {data} = props ?? {};
 
           return  createAudioNote(data,requestOptions)
@@ -718,15 +782,15 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CreateAudioNoteMutationResult = NonNullable<Awaited<ReturnType<typeof createAudioNote>>>
-    export type CreateAudioNoteMutationBody = CreateAudioNoteBody
+    export type CreateAudioNoteMutationBody = CreateAudioNoteDto
     export type CreateAudioNoteMutationError = unknown
 
     export const useCreateAudioNote = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAudioNote>>, TError,{data: CreateAudioNoteBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAudioNote>>, TError,{data: CreateAudioNoteDto}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createAudioNote>>,
         TError,
-        {data: CreateAudioNoteBody},
+        {data: CreateAudioNoteDto},
         TContext
       > => {
       return useMutation(getCreateAudioNoteMutationOptions(options), queryClient);

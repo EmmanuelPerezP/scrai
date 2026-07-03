@@ -24,7 +24,11 @@ describe('NotesService', () => {
     };
     const patients = { findOne: jest.fn(async () => patient) } as any;
     const storage = {
-      uploadAudio: jest.fn(async () => 'audio/uploaded-key'),
+      createPresignedUpload: jest.fn(async () => ({
+        key: 'audio/uploaded-key',
+        url: 'https://s3.example/put',
+      })),
+      downloadAudio: jest.fn(async () => Buffer.from('audio-bytes')),
       getSignedUrl: jest.fn(async () => 'https://signed.example/audio'),
     } as any;
     const ai = {
@@ -84,13 +88,27 @@ describe('NotesService', () => {
     expect(result.rawText).toBe('Raw note stays.'); // not lost
   });
 
-  it('creates an audio note: uploads, transcribes, summarizes, signs URL', async () => {
-    const { service, storage, ai } = setup();
-    const file = { buffer: Buffer.from('audio'), originalname: 'visit.m4a', mimetype: 'audio/mp4' };
-    const result = await service.createFromAudio({ patientId: 'pat-1', summarize: true }, file);
+  it('mints a presigned upload URL', async () => {
+    const { service, storage } = setup();
+    const result = await service.createAudioUploadUrl({
+      filename: 'visit.m4a',
+      contentType: 'audio/mp4',
+    });
+    expect(storage.createPresignedUpload).toHaveBeenCalledWith('visit.m4a', 'audio/mp4');
+    expect(result).toEqual({ key: 'audio/uploaded-key', url: 'https://s3.example/put' });
+  });
 
-    expect(storage.uploadAudio).toHaveBeenCalledWith(file);
-    expect(ai.transcribe).toHaveBeenCalledWith(file.buffer, 'visit.m4a');
+  it('creates an audio note: downloads from S3, transcribes, summarizes, signs URL', async () => {
+    const { service, storage, ai } = setup();
+    const result = await service.createFromAudio({
+      patientId: 'pat-1',
+      audioKey: 'audio/uploaded-key',
+      audioFilename: 'visit.m4a',
+      summarize: true,
+    });
+
+    expect(storage.downloadAudio).toHaveBeenCalledWith('audio/uploaded-key');
+    expect(ai.transcribe).toHaveBeenCalledWith(Buffer.from('audio-bytes'), 'visit.m4a');
     expect(result.source).toBe(NoteSource.Audio);
     expect(result.audioKey).toBe('audio/uploaded-key');
     expect(result.audioFilename).toBe('visit.m4a');
@@ -103,8 +121,12 @@ describe('NotesService', () => {
   it('marks an audio note failed if transcription throws', async () => {
     const { service, ai } = setup();
     ai.transcribe.mockRejectedValueOnce(new Error('bad audio'));
-    const file = { buffer: Buffer.from('x'), originalname: 'bad.m4a', mimetype: 'audio/mp4' };
-    const result = await service.createFromAudio({ patientId: 'pat-1', summarize: true }, file);
+    const result = await service.createFromAudio({
+      patientId: 'pat-1',
+      audioKey: 'audio/bad-key',
+      audioFilename: 'bad.m4a',
+      summarize: true,
+    });
     expect(result.status).toBe(NoteStatus.Failed);
     expect(result.error).toContain('bad audio');
     expect(ai.summarize).not.toHaveBeenCalled();

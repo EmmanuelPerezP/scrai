@@ -7,6 +7,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
+import { Readable } from 'stream';
 import { AppConfig } from '../config/configuration';
 
 /**
@@ -27,22 +28,48 @@ export class StorageService {
       region: storage.region,
       endpoint: storage.endpoint,
       forcePathStyle: storage.forcePathStyle,
+      // AWS SDK v3 adds a default CRC32 integrity checksum to PutObject, which
+      // bakes a placeholder checksum into presigned PUT URLs and makes a plain
+      // browser PUT (body only) fail with 400. Only checksum when required so
+      // the presigned upload works from the client.
+      requestChecksumCalculation: 'WHEN_REQUIRED',
     });
   }
 
-  /** Upload an audio buffer and return the S3 object key. */
-  async uploadAudio(file: { buffer: Buffer; originalname: string; mimetype: string }): Promise<string> {
-    const key = `audio/${randomUUID()}-${sanitize(file.originalname)}`;
-    await this.client.send(
-      new PutObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-      }),
+  /**
+   * Mint a presigned PUT URL so the browser can upload the audio straight to S3,
+   * without the file streaming through (and being buffered in) the API. Returns
+   * both the object key (persisted on the note) and the URL the client PUTs to.
+   *
+   * The URL is signed with the given ContentType, so the client's PUT must send
+   * the same `Content-Type` header for the signature to validate.
+   */
+  async createPresignedUpload(
+    filename: string,
+    contentType: string,
+    expiresInSeconds = 900,
+  ): Promise<{ key: string; url: string }> {
+    const key = `audio/${randomUUID()}-${sanitize(filename)}`;
+    const url = await getSignedUrl(
+      this.client,
+      new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType }),
+      { expiresIn: expiresInSeconds },
     );
-    this.logger.log(`uploaded ${key} to ${this.bucket}`);
-    return key;
+    this.logger.log(`presigned PUT for ${key} in ${this.bucket}`);
+    return { key, url };
+  }
+
+  /** Download an object's bytes (used to feed the audio to the transcription step). */
+  async downloadAudio(key: string): Promise<Buffer> {
+    const res = await this.client.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+    const body = res.Body as Readable;
+    const chunks: Buffer[] = [];
+    for await (const chunk of body) {
+      chunks.push(chunk instanceof Buffer ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
   }
 
   /** Generate a temporary, signed URL so the frontend can play the audio back. */

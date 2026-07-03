@@ -182,6 +182,8 @@ sequenceDiagram
     participant S3 as S3 (audio)
     participant AI as AiProcessor (OpenAI)
     participant DB as PostgreSQL
+    %% Audio uploads go straight to S3 via a presigned PUT — the file
+    %% bytes never stream through the API.
 
     rect rgb(238,244,238)
     note over UI,DB: Text note — POST /api/notes/text
@@ -198,12 +200,19 @@ sequenceDiagram
     end
 
     rect rgb(244,240,236)
-    note over UI,DB: Audio note — POST /api/notes/audio (multipart)
-    UI->>API: createAudioNote({ patientId, title, summarize, file })
-    API->>S: createFromAudio(dto, file)
+    note over UI,DB: Audio note — presigned direct-to-S3 upload
+    UI->>API: createAudioUploadUrl({ filename, contentType })
+    API->>S: createAudioUploadUrl(dto)
+    S->>S3: presign PUT → { key, url }
+    S-->>API: { key, url }
+    API-->>UI: 201 { key, url }
+    UI->>S3: PUT file (direct, presigned URL)
+    S3-->>UI: 200
+    UI->>API: createAudioNote({ patientId, audioKey, audioFilename, summarize })
+    API->>S: createFromAudio(dto)
     S->>DB: findOne(patient)
-    S->>S3: uploadAudio(file) → audioKey
     S->>DB: save(note, status=Processing, audioKey)
+    S->>S3: downloadAudio(key) → buffer
     S->>AI: transcribe(buffer, filename)
     AI-->>S: transcription
     S->>DB: save(rawText=transcription)

@@ -68,8 +68,12 @@ pnpm install
 # 2. Start Postgres + LocalStack (S3)
 docker compose up -d postgres localstack
 
-# 3. Create the local S3 bucket in LocalStack
+# 3. Create the local S3 bucket in LocalStack, and allow browser PUTs to it.
+#    The browser uploads audio straight to S3 via a presigned PUT, so the
+#    bucket needs CORS (real AWS gets this from Terraform; LocalStack doesn't).
 docker compose exec localstack awslocal s3 mb s3://scrai-audio
+docker compose exec localstack awslocal s3api put-bucket-cors --bucket scrai-audio \
+  --cors-configuration '{"CORSRules":[{"AllowedHeaders":["*"],"AllowedMethods":["PUT","GET","POST"],"AllowedOrigins":["*"],"ExposeHeaders":["ETag"]}]}'
 
 # 4. Configure env
 cp apps/backend/.env.example apps/backend/.env

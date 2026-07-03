@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   getListNotesQueryKey,
   useCreateAudioNote,
+  useCreateAudioUploadUrl,
   useCreateTextNote,
   useListNotes,
   useListPatients,
@@ -32,6 +33,7 @@ export function useNotesApp() {
   const patientsQuery = useListPatients();
   const createText = useCreateTextNote();
   const createAudio = useCreateAudioNote();
+  const createUploadUrl = useCreateAudioUploadUrl();
   const pipeline = useProcessingPipeline();
 
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -65,19 +67,37 @@ export function useNotesApp() {
       setView('processing');
       pipeline.start(input.mode);
       try {
-        const created =
-          input.mode === 'text'
-            ? await createText.mutateAsync({
-                data: { patientId: input.patientId, title, text: input.text, summarize: input.summarize },
-              })
-            : await createAudio.mutateAsync({
-                data: {
-                  patientId: input.patientId,
-                  title,
-                  summarize: input.summarize,
-                  file: input.file as Blob,
-                },
-              });
+        let created;
+        if (input.mode === 'text') {
+          created = await createText.mutateAsync({
+            data: { patientId: input.patientId, title, text: input.text, summarize: input.summarize },
+          });
+        } else {
+          // Audio: upload straight to S3 via a presigned PUT, then create the
+          // note referencing the object key — the bytes never touch the API.
+          const file = input.file as File;
+          const contentType = file.type || 'application/octet-stream';
+          const { key, url } = await createUploadUrl.mutateAsync({
+            data: { filename: file.name, contentType },
+          });
+          const put = await fetch(url, {
+            method: 'PUT',
+            body: file,
+            headers: { 'Content-Type': contentType },
+          });
+          if (!put.ok) {
+            throw new Error(`Audio upload failed (${put.status})`);
+          }
+          created = await createAudio.mutateAsync({
+            data: {
+              patientId: input.patientId,
+              title,
+              summarize: input.summarize,
+              audioKey: key,
+              audioFilename: file.name,
+            },
+          });
+        }
         putDetail(created);
         await queryClient.invalidateQueries({ queryKey: getListNotesQueryKey() });
         setActiveId(created.id);
@@ -89,7 +109,7 @@ export function useNotesApp() {
         pipeline.stop();
       }
     },
-    [patients, createText, createAudio, pipeline, putDetail, queryClient],
+    [patients, createText, createAudio, createUploadUrl, pipeline, putDetail, queryClient],
   );
 
   const filtered = useMemo(() => {

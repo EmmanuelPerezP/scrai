@@ -6,7 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export * from './createAudioNoteBody';
+export * from './audioUploadUrlDto';
+export * from './createAudioNoteDto';
+export * from './createAudioUploadUrlDto';
 export * from './createPatientDto';
 export * from './createPatientDtoSex';
 export * from './createTextNoteDto';
