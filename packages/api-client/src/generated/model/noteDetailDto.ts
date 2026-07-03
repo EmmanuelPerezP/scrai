@@ -45,9 +45,4 @@ export interface NoteDetailDto {
   error?: string | null;
   createdAt: string;
   updatedAt: string;
-  /**
-     * Temporary signed URL to stream the audio file
-     * @nullable
-     */
-  audioUrl?: string | null;
 }

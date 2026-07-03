@@ -57,7 +57,6 @@ describe('NotesService', () => {
     expect(result.status).toBe(NoteStatus.Completed);
     expect(result.rawText).toBe('Patient reports a cough.');
     expect(result.processedText).toContain('SOAP NOTE');
-    expect(result.audioUrl).toBeNull();
   });
 
   it('skips summarization when summarize=false', async () => {
@@ -114,8 +113,26 @@ describe('NotesService', () => {
     expect(result.audioFilename).toBe('visit.m4a');
     expect(result.rawText).toBe('transcribed speech');
     expect(result.processedText).toContain('SOAP NOTE');
-    expect(result.audioUrl).toBe('https://signed.example/audio');
     expect(result.status).toBe(NoteStatus.Completed);
+  });
+
+  it('getAudioUrl signs a URL for a note that has audio', async () => {
+    const { service, storage } = setup();
+    const note = await service.createFromAudio({
+      patientId: 'pat-1',
+      audioKey: 'audio/some-key',
+      audioFilename: 'visit.m4a',
+      summarize: false,
+    });
+    const url = await service.getAudioUrl(note.id);
+    expect(storage.getSignedUrl).toHaveBeenCalledWith('audio/some-key');
+    expect(url).toBe('https://signed.example/audio');
+  });
+
+  it('getAudioUrl 404s for a note with no audio', async () => {
+    const { service } = setup();
+    const note = await service.createFromText({ patientId: 'pat-1', text: 'typed', summarize: false });
+    await expect(service.getAudioUrl(note.id)).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('marks an audio note failed if transcription throws', async () => {

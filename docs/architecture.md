@@ -156,10 +156,12 @@ flowchart LR
 | GET    | `/api/patients`    | List patients                             |
 | GET    | `/api/patients/:id`| Get one patient                           |
 | POST   | `/api/patients`    | Create patient                            |
-| GET    | `/api/notes`       | List notes (with patient summary)         |
-| GET    | `/api/notes/:id`   | Note detail (+ signed audio URL if any)   |
-| POST   | `/api/notes/text`  | Create note from typed text               |
-| POST   | `/api/notes/audio` | Create note from an uploaded audio file   |
+| GET    | `/api/notes`               | List notes (with patient summary)           |
+| GET    | `/api/notes/:id`           | Note detail — pure cacheable data           |
+| GET    | `/api/notes/:id/audio`     | 302-redirect to a signed S3 URL for playback|
+| POST   | `/api/notes/text`          | Create note from typed text                 |
+| POST   | `/api/notes/audio/upload-url` | Presigned S3 PUT URL for direct upload   |
+| POST   | `/api/notes/audio`         | Create note from an already-uploaded object |
 
 The `AiProcessor` interface has two implementations selected by `AI_PROVIDER`:
 `StubProcessor` (deterministic, no external calls) and `OpenAiProcessor`
@@ -221,6 +223,14 @@ sequenceDiagram
     S->>DB: save(processedText, status=Completed)
     S-->>API: NoteDetailDto
     API-->>UI: 201 note
+    end
+
+    rect rgb(238,244,238)
+    note over UI,S3: Playback — on demand, no credential in the note payload
+    UI->>API: GET /api/notes/:id/audio  (<audio> src)
+    API->>S: getAudioUrl(id) → sign S3 GET URL
+    API-->>UI: 302 Location: signed S3 URL
+    UI->>S3: GET audio (direct, signed)
     end
 
     note over S,DB: On any AI/S3 error → status=Failed, error=message (note is still persisted)

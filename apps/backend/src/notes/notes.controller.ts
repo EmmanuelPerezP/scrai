@@ -1,5 +1,11 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common';
-import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Redirect } from '@nestjs/common';
+import {
+  ApiCreatedResponse,
+  ApiExcludeEndpoint,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import {
   AudioUploadUrlDto,
   CreateAudioNoteDto,
@@ -26,6 +32,16 @@ export class NotesController {
   @ApiOkResponse({ type: NoteDetailDto })
   findOne(@Param('id', new ParseUUIDPipe()) id: string): Promise<NoteDetailDto> {
     return this.notesService.findOne(id);
+  }
+
+  // Excluded from the OpenAPI/typed client: this 302-redirects to a signed S3
+  // URL and is consumed directly as an <audio> src, not as a JSON resource.
+  @Get(':id/audio')
+  @ApiExcludeEndpoint()
+  @Redirect()
+  async streamAudio(@Param('id', new ParseUUIDPipe()) id: string) {
+    const url = await this.notesService.getAudioUrl(id);
+    return { url, statusCode: 302 };
   }
 
   @Post('text')

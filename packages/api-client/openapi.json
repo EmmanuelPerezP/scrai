@@ -534,11 +534,6 @@
           "updatedAt": {
             "format": "date-time",
             "type": "string"
-          },
-          "audioUrl": {
-            "type": "string",
-            "nullable": true,
-            "description": "Temporary signed URL to stream the audio file"
           }
         },
         "required": [

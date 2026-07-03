@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { NoteDetailDto, Patient } from '@/lib/api';
+import { noteAudioUrl, type NoteDetailDto, type Patient } from '@/lib/api';
 import { Icon } from '@/components/Icon';
 import { StatusPill } from '@/components/NoteChips';
 import { PatientSidebar } from '@/components/PatientSidebar';
@@ -139,10 +139,10 @@ export function NoteDetailView({ note, patient }: { note: NoteDetailDto; patient
                 <Icon name="graphic_eq" size={17} />
                 {note.source === 'audio' ? 'Raw transcript · Whisper' : 'Typed note'}
               </div>
-              {note.audioUrl ? (
+              {note.audioKey ? (
                 <div className="mb-[18px]">
                   {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                  <audio controls src={note.audioUrl} className="w-full" />
+                  <audio controls src={noteAudioUrl(note.id)} className="w-full" />
                 </div>
               ) : null}
               <div className="font-sans text-[14.5px] leading-[1.7] text-body-soft whitespace-pre-wrap pl-[15px] border-l-2 border-line-card">

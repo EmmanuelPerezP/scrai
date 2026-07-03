@@ -38,8 +38,19 @@ export class NotesService {
     if (!note) {
       throw new NotFoundException(`Note ${id} not found`);
     }
-    const audioUrl = note.audioKey ? await this.storage.getSignedUrl(note.audioKey) : null;
-    return { ...note, audioUrl };
+    return note;
+  }
+
+  /**
+   * Mint a short-lived signed URL to stream a note's audio. Called on demand by
+   * the redirect endpoint, so the credential is never baked into cached note data.
+   */
+  async getAudioUrl(id: string): Promise<string> {
+    const note = await this.notes.findOne({ where: { id } });
+    if (!note?.audioKey) {
+      throw new NotFoundException(`No audio for note ${id}`);
+    }
+    return this.storage.getSignedUrl(note.audioKey);
   }
 
   /** Create a note from typed text and (optionally) generate a SOAP summary. */

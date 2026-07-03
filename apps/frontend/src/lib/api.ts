@@ -20,4 +20,13 @@ export function resolveApiBaseUrl(): string {
 // Configure the generated client once per bundle evaluation.
 configureApiClient({ baseUrl: resolveApiBaseUrl() });
 
+/**
+ * Absolute URL for streaming a note's audio. Hits the backend, which
+ * 302-redirects to a short-lived signed S3 URL — so the credential is minted
+ * on demand and never lives in cached note data. Used directly as an <audio> src.
+ */
+export function noteAudioUrl(noteId: string): string {
+  return `${resolveApiBaseUrl()}/api/notes/${noteId}/audio`;
+}
+
 export * from '@scrai/api-client';

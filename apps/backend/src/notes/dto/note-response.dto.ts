@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
+import { ApiProperty, OmitType } from '@nestjs/swagger';
 import { Patient } from '../../patients/patient.entity';
 import { Note } from '../note.entity';
 
@@ -11,12 +11,9 @@ export class NoteListItemDto extends OmitType(Note, ['patient'] as const) {
   patient: Patient;
 }
 
-/** Full note detail, including a signed URL to play back the audio if present. */
-export class NoteDetailDto extends Note {
-  @ApiPropertyOptional({
-    type: String,
-    nullable: true,
-    description: 'Temporary signed URL to stream the audio file',
-  })
-  audioUrl?: string | null;
-}
+/**
+ * Full note detail — pure, cacheable data. Audio is played via the separate
+ * GET /api/notes/:id/audio endpoint (which 302-redirects to a signed S3 URL),
+ * so no short-lived credential is embedded in this response.
+ */
+export class NoteDetailDto extends Note {}
