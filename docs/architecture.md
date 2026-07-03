@@ -20,55 +20,67 @@ Single ALB fronts two ECS Fargate services (Next.js frontend, NestJS backend) wi
 path-based routing. To keep the demo cheap there is **no NAT gateway** — tasks run in
 public subnets with a public IP for outbound (ECR pulls, OpenAI). RDS stays private.
 
+It's easier to read as two views: the **runtime request path**, and the
+**operations** plane (how images ship and how spend is capped).
+
+**Runtime topology** — request path and data stores:
+
 ```mermaid
-flowchart TB
-    user([Clinician / Browser])
+flowchart LR
+    user([Clinician<br/>Browser])
 
-    subgraph aws["AWS — us-east-1"]
-        subgraph vpc["VPC (2 AZs)"]
-            alb["Application Load Balancer<br/>(HTTP :80, SG: alb)"]
+    subgraph aws["AWS us-east-1 · VPC (2 AZs)"]
+        direction LR
+        alb["Application<br/>Load Balancer<br/>HTTP :80"]
 
-            subgraph public["Public subnets"]
-                subgraph cluster["ECS Fargate cluster"]
-                    fe["frontend service<br/>Next.js :3000"]
-                    be["backend service<br/>NestJS :4000"]
-                end
-            end
-
-            subgraph private["Private subnets"]
-                rds[("RDS PostgreSQL 16<br/>SG: rds :5432, TLS enforced")]
-            end
+        subgraph public["Public subnets"]
+            direction TB
+            fe["frontend<br/>Next.js :3000"]
+            be["backend<br/>NestJS :4000"]
         end
 
-        s3[("S3 — audio bucket<br/>private, CORS")]
-        secrets["Secrets Manager<br/>database-url · openai-api-key"]
-        ecr["ECR<br/>backend + frontend repos"]
-
-        subgraph guard["Cost guard"]
-            budget["AWS Budgets<br/>$20 / $40 alerts"]
-            sns["SNS topic"]
-            lambda["Lambda<br/>scale ECS→0, stop RDS"]
+        subgraph private["Private subnets"]
+            rds[("RDS PostgreSQL 16<br/>:5432 · TLS")]
         end
+
+        s3[("S3<br/>audio bucket")]
+        secrets["Secrets Manager<br/>db-url · openai-key"]
     end
 
     openai["OpenAI API<br/>Whisper + GPT-4o-mini"]
-    gha["GitHub Actions<br/>OIDC deploy"]
 
-    user -->|"HTTP"| alb
+    user -->|HTTPS| alb
     alb -->|"/ (default)"| fe
     alb -->|"/api/*, /docs"| be
-    be -->|"SQL/TLS"| rds
-    be -->|"put/get audio"| s3
-    be -->|"read at boot"| secrets
-    be -->|"transcribe / summarize"| openai
-    cluster -.->|"image pull"| ecr
+    be -->|SQL / TLS| rds
+    be -->|put / get audio| s3
+    be -->|read at boot| secrets
+    be -->|transcribe / summarize| openai
+```
 
-    budget --> sns --> lambda
-    lambda -.->|"desiredCount=0"| cluster
-    lambda -.->|"stop"| rds
+**Operations** — deploy pipeline and the automatic cost guard:
 
-    gha -.->|"push images"| ecr
-    gha -.->|"terraform apply"| aws
+```mermaid
+flowchart LR
+    gha["GitHub Actions<br/>OIDC deploy"]
+    ecr["ECR<br/>image repos"]
+    cluster["ECS Fargate<br/>frontend + backend"]
+    rds[("RDS<br/>PostgreSQL")]
+
+    subgraph guard["Cost guard — auto shutdown"]
+        direction LR
+        budget["AWS Budgets<br/>$20 / $40"]
+        sns["SNS topic"]
+        lambda["Lambda"]
+    end
+
+    gha -->|build &amp; push| ecr
+    gha -->|terraform apply| cluster
+    ecr -->|image pull| cluster
+    budget -->|threshold breached| sns
+    sns --> lambda
+    lambda -->|desiredCount = 0| cluster
+    lambda -->|stop instance| rds
 ```
 
 **Routing (ALB listener rules).**

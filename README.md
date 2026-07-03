@@ -53,7 +53,9 @@ the API same-origin under `/api`.
 
 For detailed diagrams — AWS deployment, component/data flow, the note-processing
 sequence, the ER schema, and the note lifecycle — see
-[`docs/architecture.md`](docs/architecture.md).
+[`docs/architecture.md`](docs/architecture.md). A design proposal for adding
+real-time speech-to-text ("Record live") is in
+[`docs/live-transcription-design.md`](docs/live-transcription-design.md).
 
 ## Quick start (local)
 
