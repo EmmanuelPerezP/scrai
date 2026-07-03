@@ -26,15 +26,15 @@ It's easier to read as two views: the **runtime request path**, and the
 **Runtime topology** — request path and data stores:
 
 ```mermaid
-flowchart LR
+flowchart TB
     user([Clinician<br/>Browser])
 
     subgraph aws["AWS us-east-1 · VPC (2 AZs)"]
-        direction LR
+        direction TB
         alb["Application<br/>Load Balancer<br/>HTTP :80"]
 
         subgraph public["Public subnets"]
-            direction TB
+            direction LR
             fe["frontend<br/>Next.js :3000"]
             be["backend<br/>NestJS :4000"]
         end
@@ -61,7 +61,7 @@ flowchart LR
 **Operations** — deploy pipeline and the automatic cost guard:
 
 ```mermaid
-flowchart LR
+flowchart TB
     gha["GitHub Actions<br/>OIDC deploy"]
     ecr["ECR<br/>image repos"]
     cluster["ECS Fargate<br/>frontend + backend"]
