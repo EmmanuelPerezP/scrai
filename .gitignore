@@ -25,6 +25,11 @@ out/
 npm-debug.log*
 pnpm-debug.log*
 
+# large media — host via GitHub Releases, not in-repo (see README guided tour)
+*.mkv
+*.mp4
+*.mov
+
 # terraform
 infra/terraform/.terraform/
 infra/terraform/*.tfstate

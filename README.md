@@ -6,6 +6,8 @@ audio is transcribed and (optionally) summarized into a SOAP note. Each note is
 stored against a mock patient, and the UI lists notes and shows a note alongside
 its patient details.
 
+🎥 **[Watch the guided tour](https://github.com/EmmanuelPerezP/scrai/releases/download/guided-tour/scrai-guided-tour.mp4)** — an ~11-minute walkthrough of the app.
+
 ## Stack
 
 
